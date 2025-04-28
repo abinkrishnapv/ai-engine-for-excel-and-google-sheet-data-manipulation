@@ -1,0 +1,26 @@
+{
+  "name": "ai-engine-for-excel-and-google-sheet-data-manipulation",
+  "version": "1.0.0",
+  "description": "AI Engine for Excel and Google Sheet Data Manipulation",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abinkrishnapv/ai-engine-for-excel-and-google-sheet-data-manipulation.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abinkrishnapv/ai-engine-for-excel-and-google-sheet-data-manipulation/issues"
+  },
+  "homepage": "https://github.com/abinkrishnapv/ai-engine-for-excel-and-google-sheet-data-manipulation#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
