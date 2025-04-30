@@ -1,5 +1,6 @@
 import { getExcelMetadata } from "../lib/excel.js";
 import File from "../models/file.model.js";
+import QueryResult from "../models/queryResult.model.js";
 import { processQuery } from "../lib/llm.js";
 
 export const query = async (req, res) => {
@@ -11,6 +12,8 @@ export const query = async (req, res) => {
         }
 
         let data = await processQuery(req.body.input,req.session)
+
+
         return res.status(200).json(data);
 
 

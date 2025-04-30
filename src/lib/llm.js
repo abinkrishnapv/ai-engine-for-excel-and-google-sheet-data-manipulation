@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai'
 import File from '../models/file.model.js'
 import { getExcelData } from './excel.js'
+import QueryResult from '../models/queryResult.model.js'
 
 
 export const processQuery = async (input, session) => {
@@ -18,12 +19,24 @@ export const processQuery = async (input, session) => {
         return null;
     }
 
+    const previousQueries = await QueryResult.find({ sessionId: session.id }).sort({ createdAt: -1 }).limit(5)
+
+    const lastQueries = previousQueries.map(item => ({
+        userQuery: item.query,
+        llmResult: item.outputCode
+    }));
+
+
+    console.log(lastQueries)
+
     // try {
     const prompt = `you are given a excel metadata which contains the column name and its datatype
         - metadata : ${JSON.stringify(file.metadata)}
         - User Query : "${input}"
+        - Last 5 user queries and results (sorted in descending order, with the latest at the top):
+            ${JSON.stringify(lastQueries)} 
 
-        Generate a safe and efficient JavaScript function that returns the answer to the user query.
+        Based on the provided metadata and the context of previous queries, determine whether the current user query is a follow-up. If it is a follow-up, generate the appropriate code to continue the task from the previous query; otherwise, treat it as a new query and generate a safe and efficient JavaScript function to perform the requested operation. 
         The function name should be always "performUserOperation"
         Only include the function body. Do not access external resources.the answer returned should be an object
         `
@@ -41,13 +54,14 @@ export const processQuery = async (input, session) => {
     if (response.status == "completed" && !response.error) {
 
         let outputCode = response.output_text;
-        outputCode = outputCode.replace(/`/g, '')
+        // outputCode = outputCode.replace(/`/g, '')
 
-        if (outputCode.startsWith("javascript")) {
-            outputCode = outputCode.substring(10)
+        if (outputCode.startsWith("```javascript")) {
+            outputCode = outputCode.substring(13)
+            outputCode = outputCode.slice(0,-3)
         }
         console.log(outputCode)
-      
+
 
         outputCode = `${outputCode}\nreturn performUserOperation;`;
 
@@ -57,6 +71,14 @@ export const processQuery = async (input, session) => {
         const data = await getExcelData(file.filename);
         const result = dynamicFunction(data);
         console.log(result)
+
+        await QueryResult.create({
+            sessionId: session.id,
+            fileId,
+            query: input,
+            outputCode,
+            result: result
+        });
         return result;
 
 
