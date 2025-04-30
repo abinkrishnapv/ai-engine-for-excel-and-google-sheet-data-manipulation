@@ -5,6 +5,8 @@ import session from "express-session";
 // import swaggerUi from "swagger-ui-express";
 // import swaggerJSDoc from "swagger-jsdoc";
 import userActionsRoutes from "./routes/userActions.route.js"
+import { connectDB } from "./lib/db.js";
+
 
 dotenv.config();
 
@@ -12,7 +14,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT;
 const SESSION_SECRET = process.env.SESSION_SECRET;
-
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
@@ -36,4 +37,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running at port ${PORT}`);
+  connectDB();
 });
