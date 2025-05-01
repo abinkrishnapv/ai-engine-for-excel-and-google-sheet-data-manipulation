@@ -4,7 +4,8 @@
   "description": "AI Engine for Excel and Google Sheet Data Manipulation",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
   },
   "type": "module",
   "repository": {

@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+      - chromadb
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/mydb
+      CHROMADB_URI: http://chromadb:8000 
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
