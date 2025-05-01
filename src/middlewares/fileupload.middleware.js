@@ -7,7 +7,6 @@ const storage = multer.diskStorage({
         cb(null, 'uploads');
     },
     filename: (req, file, cb) => {
-        console.log(path.extname(file.originalname))
 
         if (path.extname(file.originalname) === ".xlsx") {
             const filename = `${uuidv4()}.xlsx`;

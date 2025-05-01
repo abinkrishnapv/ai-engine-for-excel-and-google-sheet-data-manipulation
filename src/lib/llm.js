@@ -2,38 +2,55 @@ import { OpenAI } from 'openai'
 import File from '../models/file.model.js'
 import { getExcelData } from './excel.js'
 import QueryResult from '../models/queryResult.model.js'
+import { ChromaClient } from "chromadb";
+import { v4 as uuidv4 } from 'uuid';
 
 
-export const processQuery = async (input, session) => {
+
+const askToLLM = async (prompt) => {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+    const response = await client.responses.create({
+        model: "gpt-4.1",
+        input: prompt
+    });
 
-
-    let primaryFileId = session.uploadedFiles[0].fileID;
-    let secondaryFileId = session.uploadedFiles[1]?.fileID;
-
-
-    const primaryFile = await File.findById(primaryFileId);
-
-    if (!primaryFile) {
-        console.log('File not found');
-        return null;
+    if (response.status == "completed" && !response.error) {
+        return response.output_text
     }
-
-    const secondaryFile = await File.findById(secondaryFileId);
-
-    const previousQueries = await QueryResult.find({ sessionId: session.id }).sort({ createdAt: -1 }).limit(5)
-
-    const lastQueries = previousQueries.map(item => ({
-        userQuery: item.query,
-        llmResult: item.outputCode
-    }));
+    else if (response.error) {
+        console.error("Openai api error :", response.error);
+    } else {
+        console.error(`Response status : ${response.status}`);
+    }
+}
 
 
-    console.log(lastQueries)
 
-    // try {
-    const prompt = `
+export const processQuery = async (input, session, type) => {
+
+    if (type === "structured") {
+
+        let primaryFileId = session.uploadedFiles[0].fileID;
+        let secondaryFileId = session.uploadedFiles[1]?.fileID;
+        const primaryFile = await File.findById(primaryFileId);
+
+        if (!primaryFile) {
+            console.log('File not found');
+            return null;
+        }
+
+        const secondaryFile = await File.findById(secondaryFileId);
+        const previousQueries = await QueryResult.find({ sessionId: session.id }).sort({ createdAt: -1 }).limit(5)
+
+        const lastQueries = previousQueries.map(item => ({
+            userQuery: item.query,
+            llmResult: item.outputCode
+        }));
+
+        // console.log(lastQueries)
+
+        const prompt = `
         you are given a excel metadata which contains the column name and its datatype
             - metadata : ${JSON.stringify(primaryFile.metadata)}
             - User Query : "${input}"
@@ -49,42 +66,29 @@ export const processQuery = async (input, session) => {
             - If it's not, treat it as a new query and generate a safe and efficient JavaScript function to perform the requested operation. 
 
         The function name should be always "performUserOperation"
-        Only include the function body. Do not access external resources.the answer returned should be an object
-        
-        `
+        Only include the function body. Do not access external resources.the answer returned should be an object`
 
-    console.log(prompt)
+        console.log(prompt)
 
-
-
-    const response = await client.responses.create({
-        model: "gpt-4.1",
-        input: prompt
-    });
-
-
-    if (response.status == "completed" && !response.error) {
-
-        let outputCode = response.output_text;
-        // outputCode = outputCode.replace(/`/g, '')
+        let outputCode = await askToLLM(prompt);
 
         if (outputCode.startsWith("```javascript")) {
             outputCode = outputCode.substring(13)
             outputCode = outputCode.slice(0, -3)
         }
-        console.log(outputCode)
-
+        // console.log(outputCode)
 
         outputCode = `${outputCode}\nreturn performUserOperation;`;
-
-
         const dynamicFunction = new Function(outputCode)();
-        console.log(typeof dynamicFunction)
+        // console.log(typeof dynamicFunction)
         const primaryData = await getExcelData(primaryFile.filename);
+
         if (secondaryFile) {
             var secondaryData = await getExcelData(secondaryFile.filename);
         }
+
         const result = dynamicFunction(primaryData, secondaryData);
+
         console.log(result)
 
         await QueryResult.create({
@@ -95,13 +99,74 @@ export const processQuery = async (input, session) => {
             outputCode,
             result: result
         });
+
         return result;
+    }
+    else {
+        let embeddings = await createEmbeddings(input)
+        const chroma = new ChromaClient({ path: process.env.CHROMADB_URI });
 
+        const collection = await chroma.getOrCreateCollection({
+            name: "excel-sheet-embeddings",
+        });
 
-    } else if (response.error) {
-        console.error("Openai api error :", response.error);
-    } else {
-        console.error(`Response status : ${response.status}`);
+        const results = await collection.query({
+            queryEmbeddings: embeddings,
+            nResults: 2,
+            where: {
+                sessionId: { $eq: session.id }
+            },
+        });
+
+        console.log(results.documents)
+
+        let prompt = `You are given a set of documents.
+        Analyse the documents and answer the user’s query based on the information contained in the documents below.
+            - User query : ${input}
+            - Documents  : ${results.documents}
+          `
+
+        let result = await askToLLM(prompt)
+        return { "answer": result }
     }
 
 }
+
+export const createEmbeddings = async (input) => {
+
+    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    try {
+        const response = await client.embeddings.create({
+            model: "text-embedding-3-small",
+            input,
+        });
+        return response.data[0].embedding;
+    } catch (err) {
+        console.error("Error in createEmbeddings:", err);
+        return null;
+    }
+}
+
+
+export const addToChromaDB = async (embeddings, chunk, sessionId) => {
+
+    const chroma = new ChromaClient({ path: process.env.CHROMADB_URI });
+
+    const collection = await chroma.getOrCreateCollection({
+        name: "excel-sheet-embeddings",
+    });
+
+    const chunkAsString = chunk.join(" ");
+    
+    await collection.add({
+        ids: [uuidv4()],
+        embeddings,
+        documents: [chunkAsString],
+        metadatas: [{ sessionId }],
+    });
+
+}
+
+
+
