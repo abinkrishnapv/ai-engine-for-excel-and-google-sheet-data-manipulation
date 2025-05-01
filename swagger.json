@@ -1,0 +1,117 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "AI Engine for Excel Sheet Data Manipulation",
+        "version": "1.0.0",
+        "description": "An AI engine capable of reading, analyzing, and updating data in an Excel sheet. The sheet contains both structured and unstructured data, and the engine uses LLM for processing unstructured data."
+    },
+    "paths": {
+        "/userActions/uploadFile": {
+            "post": {
+                "summary": "Upload an Excel file for processing",
+                "tags": [
+                    "UserActions"
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Excel (.xlsx) file to upload"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "structured",
+                                            "unstructured"
+                                        ],
+                                        "default": "structured",
+                                        "description": "Type of data in the Excel file"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "File uploaded and processed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "File Uploaded"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid file or format"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/userActions/query": {
+            "post": {
+                "summary": "Ask a question based on uploaded document content",
+                "tags": [
+                    "UserActions"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "input": {
+                                        "type": "tring",
+                                        "description": "The user’s question",
+                                        "example": "Sum of salary"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Answer generated from the uploaded data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "salary": {
+                                            "type": "string",
+                                            "example": "15552252225"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        }
+    }
+}

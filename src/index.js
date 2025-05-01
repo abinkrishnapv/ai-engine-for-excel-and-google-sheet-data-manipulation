@@ -2,10 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import session from "express-session";
-// import swaggerUi from "swagger-ui-express";
-// import swaggerJSDoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 import userActionsRoutes from "./routes/userActions.route.js"
 import { connectDB } from "./lib/db.js";
+import fs from "fs"
+import path from "path";
 
 
 dotenv.config();
@@ -13,6 +14,10 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
+
+const swaggerDocument = JSON.parse(fs.readFileSync('./swagger.json'), 'utf8');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 const SESSION_SECRET = process.env.SESSION_SECRET;
 app.use(session({
   secret: SESSION_SECRET,
