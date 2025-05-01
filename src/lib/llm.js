@@ -9,15 +9,18 @@ export const processQuery = async (input, session) => {
 
 
 
-    let fileId = session.uploadedFiles[0].fileID;
+    let primaryFileId = session.uploadedFiles[0].fileID;
+    let secondaryFileId = session.uploadedFiles[1]?.fileID;
 
 
-    const file = await File.findById(fileId);
+    const primaryFile = await File.findById(primaryFileId);
 
-    if (!file) {
+    if (!primaryFile) {
         console.log('File not found');
         return null;
     }
+
+    const secondaryFile = await File.findById(secondaryFileId);
 
     const previousQueries = await QueryResult.find({ sessionId: session.id }).sort({ createdAt: -1 }).limit(5)
 
@@ -30,15 +33,24 @@ export const processQuery = async (input, session) => {
     console.log(lastQueries)
 
     // try {
-    const prompt = `you are given a excel metadata which contains the column name and its datatype
-        - metadata : ${JSON.stringify(file.metadata)}
-        - User Query : "${input}"
-        - Last 5 user queries and results (sorted in descending order, with the latest at the top):
-            ${JSON.stringify(lastQueries)} 
+    const prompt = `
+        you are given a excel metadata which contains the column name and its datatype
+            - metadata : ${JSON.stringify(primaryFile.metadata)}
+            - User Query : "${input}"
+            - Last 5 user queries and results (sorted in descending order, with the latest at the top):
+                ${JSON.stringify(lastQueries)} 
 
-        Based on the provided metadata and the context of previous queries, determine whether the current user query is a follow-up. If it is a follow-up, generate the appropriate code to continue the task from the previous query; otherwise, treat it as a new query and generate a safe and efficient JavaScript function to perform the requested operation. 
+        If the operation involves joining data from two sheets, you will receive data from both sheets as input to the function.
+        In that case, use the following secondary sheet metadata to generate the appropriate code:
+            - Secondary metadata : ${JSON.stringify(secondaryFile?.metadata)}
+
+        Based on the provided metadata and the context of previous queries, determine whether the current user query is a follow-up. 
+            - If it is a follow-up, generate the appropriate code to continue the task from the previous query; 
+            - If it's not, treat it as a new query and generate a safe and efficient JavaScript function to perform the requested operation. 
+
         The function name should be always "performUserOperation"
         Only include the function body. Do not access external resources.the answer returned should be an object
+        
         `
 
     console.log(prompt)
@@ -58,7 +70,7 @@ export const processQuery = async (input, session) => {
 
         if (outputCode.startsWith("```javascript")) {
             outputCode = outputCode.substring(13)
-            outputCode = outputCode.slice(0,-3)
+            outputCode = outputCode.slice(0, -3)
         }
         console.log(outputCode)
 
@@ -68,13 +80,17 @@ export const processQuery = async (input, session) => {
 
         const dynamicFunction = new Function(outputCode)();
         console.log(typeof dynamicFunction)
-        const data = await getExcelData(file.filename);
-        const result = dynamicFunction(data);
+        const primaryData = await getExcelData(primaryFile.filename);
+        if (secondaryFile) {
+            var secondaryData = await getExcelData(secondaryFile.filename);
+        }
+        const result = dynamicFunction(primaryData, secondaryData);
         console.log(result)
 
         await QueryResult.create({
             sessionId: session.id,
-            fileId,
+            primaryFileId,
+            secondaryFileId,
             query: input,
             outputCode,
             result: result

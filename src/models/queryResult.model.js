@@ -5,10 +5,14 @@ const queryResultSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    fileId: {
+    primaryFileId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'File',
         required: true
+    },
+    secondaryFileId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'File',
     },
     query: {
         type: String

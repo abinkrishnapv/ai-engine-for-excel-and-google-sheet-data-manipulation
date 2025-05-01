@@ -11,7 +11,7 @@ export const query = async (req, res) => {
             return res.status(200).json({ message: "No dataset available. Please upload a  dataset first" });
         }
 
-        let data = await processQuery(req.body.input,req.session)
+        let data = await processQuery(req.body.input, req.session)
 
 
         return res.status(200).json(data);
@@ -46,7 +46,13 @@ export const uploadFile = async (req, res) => {
 
         console.log(metadata);
 
-        req.session.uploadedFiles.push({ fileID: file._id })
+
+        if (req.session.uploadedFiles.length < 2) {
+            req.session.uploadedFiles.push({ fileID: file._id });
+        } else {
+            req.session.uploadedFiles[1] = { fileID: file._id };
+        }
+        // req.session.uploadedFiles.push({ fileID: file._id })
 
         console.log(req.session)
 
