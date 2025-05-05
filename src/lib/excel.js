@@ -1,5 +1,8 @@
 import ExcelJS from "exceljs";
 import fs from "fs";
+import path from 'path'
+import XLSX from 'xlsx'
+import { connection } from "./duckdb.js";
 
 
 export const getExcelMetadata = async (file) => {
@@ -71,3 +74,63 @@ export const getExcelDataArray = async (filename) => {
 
     return data;
 }
+
+
+export const convertSheetToCSV = (filename) => {
+    const workbook = XLSX.readFile(filename);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    const { dir, name } = path.parse(filename);
+    fs.writeFileSync(path.join(dir, `${name}.csv`), csv, 'utf-8');
+};
+
+
+export const createDuckDBTableFromSheet = async (filename) => {
+
+    const workbook = XLSX.readFile(filename);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    const { dir, name } = path.parse(filename);
+    fs.writeFileSync(path.join(dir, `${name}.csv`), csv, 'utf-8');
+
+  
+    let csvFilePath = path.join(dir, `${name}.csv`)
+    const tableName = path.parse(csvFilePath).name;
+    console.log(tableName);
+
+    const query = `
+    CREATE TABLE "${tableName}" AS 
+    SELECT * FROM read_csv_auto('${csvFilePath}', AUTO_DETECT=TRUE);
+  `;
+
+    try {
+        await connection.run(query);
+        console.log(`Table '${tableName}' created successfully.`);
+        return { connection, tableName };
+    } catch (err) {
+        console.error('Failed to create table from CSV:', err);
+        throw err;
+    }
+};
+
+export const getTableSchema = async (tableName) => {
+    try {
+        const result = await connection.run(`PRAGMA table_info('${tableName}')`);
+        console.log(result)
+        const rowObjects = await result.getRowObjectsJson();
+        console.log(rowObjects)
+
+
+        const schema = rowObjects.map(row => ({
+            column: row.name,
+            type: row.type
+        }));
+
+        console.log(schema)
+
+        return schema;
+    } catch (error) {
+        console.error(`Failed to get schema for table "${tableName}":`, error);
+        throw error;
+    }
+};

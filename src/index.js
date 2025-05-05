@@ -7,6 +7,8 @@ import userActionsRoutes from "./routes/userActions.route.js"
 import { connectDB } from "./lib/db.js";
 import fs from "fs"
 import path from "path";
+import { DuckDBInstance } from '@duckdb/node-api'
+
 
 
 dotenv.config();
@@ -14,6 +16,9 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT;
+
+
+
 
 const swaggerDocument = JSON.parse(fs.readFileSync('./swagger.json'), 'utf8');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));

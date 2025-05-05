@@ -20,9 +20,11 @@
   },
   "homepage": "https://github.com/abinkrishnapv/ai-engine-for-excel-and-google-sheet-data-manipulation#readme",
   "dependencies": {
+    "@duckdb/node-api": "^1.2.2-alpha.18",
     "chromadb": "^2.3.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.5.0",
+    "duckdb": "^1.2.1",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
@@ -30,7 +32,8 @@
     "multer": "^1.4.5-lts.2",
     "openai": "^4.96.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.7.0",
